@@ -1,0 +1,13 @@
+{
+  "name": "De-Slop Machine",
+  "short_name": "De-Slop",
+  "description": "AI writing audit and Claude-powered rewrite tool",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0c0c0c",
+  "theme_color": "#ff6b35",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
