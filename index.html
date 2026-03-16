@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>De-Slop Machine</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0c;
+    --surface: #151515;
+    --surface-2: #1c1c1c;
+    --surface-3: #232323;
+    --border: #2a2a2a;
+    --border-hover: #3a3a3a;
+    --text: #e6e1d8;
+    --text-muted: #777;
+    --text-dim: #555;
+    --accent: #ff6b35;
+    --accent-hover: #e55a28;
+    --accent-dim: rgba(255,107,53,0.12);
+    --accent-glow: rgba(255,107,53,0.06);
+    --red: #e74c3c;
+    --red-dim: rgba(231,76,60,0.1);
+    --yellow: #e8b83d;
+    --yellow-dim: rgba(232,184,61,0.1);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.1);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.1);
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Newsreader', Georgia, serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 28px 80px;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    margin-bottom: 52px;
+  }
+
+  .header .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .header .eyebrow::before {
+    content: '';
+    width: 18px;
+    height: 1.5px;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  .header h1 {
+    font-family: var(--serif);
+    font-size: 46px;
+    font-weight: 600;
+    letter-spacing: -1.5px;
+    color: var(--text);
+    line-height: 1.05;
+    margin-bottom: 10px;
+  }
+
+  .header h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .header .subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+
+  .header .subtitle a {
+    color: var(--text-dim);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ─── Input ─── */
+  .input-section { margin-bottom: 20px; }
+
+  .input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+
+  .input-label label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+  }
+
+  .char-count {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 190px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 15.5px;
+    line-height: 1.75;
+    padding: 22px;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  textarea::placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ─── Controls ─── */
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 44px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 11px 26px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(255,107,53,0.2);
+  }
+
+  .btn-primary:disabled {
+    background: var(--surface-3);
+    color: var(--text-dim);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+  }
+
+  .divider-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .sample-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  /* ─── Loading ─── */
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    display: none;
+  }
+
+  .loading.visible { display: block; }
+
+  .loading-bar {
+    width: 180px;
+    height: 2px;
+    background: var(--surface-3);
+    border-radius: 2px;
+    margin: 0 auto 14px;
+    overflow: hidden;
+  }
+
+  .loading-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: load 2s ease-in-out infinite;
+  }
+
+  @keyframes load {
+    0% { width: 0; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0; margin-left: 100%; }
+  }
+
+  .loading-text {
+    color: var(--text-dim);
+    font-size: 11.5px;
+  }
+
+  /* ─── Results ─── */
+  .results {
+    display: none;
+    animation: fadeUp 0.35s ease;
+  }
+
+  .results.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Score ─── */
+  .score-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+
+  .score-hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 36px;
+    text-align: center;
+    min-width: 130px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .score-num {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+    letter-spacing: -2px;
+  }
+
+  .score-num.good { color: var(--green); }
+  .score-num.ok { color: var(--yellow); }
+  .score-num.bad { color: var(--red); }
+
+  .score-tag {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .score-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+  }
+
+  .score-cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .score-cell-label {
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+
+  .score-badge {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 4px;
+    min-width: 28px;
+    text-align: center;
+  }
+
+  .score-badge.z { color: var(--green); background: var(--green-dim); }
+  .score-badge.lo { color: var(--yellow); background: var(--yellow-dim); }
+  .score-badge.hi { color: var(--red); background: var(--red-dim); }
+
+  /* ─── Tabs ─── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 11px 18px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+  }
+
+  .tab:hover { color: var(--text-muted); }
+
+  .tab.active { color: var(--accent); }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ─── Findings ─── */
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--red);
+    transition: border-color 0.15s;
+  }
+
+  .finding:hover { border-left-color: var(--accent); }
+
+  .finding-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .finding-type {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+  }
+
+  .sev {
+    font-size: 9.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sev-high { background: var(--red-dim); color: var(--red); }
+  .sev-med { background: var(--yellow-dim); color: var(--yellow); }
+  .sev-low { background: var(--blue-dim); color: var(--blue); }
+
+  .finding-quote {
+    font-family: var(--serif);
+    font-size: 14.5px;
+    color: var(--text);
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 5px;
+    margin-bottom: 10px;
+    line-height: 1.7;
+  }
+
+  .finding-quote mark {
+    background: var(--red-dim);
+    color: var(--red);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .finding-fix {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .finding-fix strong { color: var(--green); font-weight: 600; }
+
+  /* ─── Rewrite ─── */
+  .rewrite-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .rewrite-section {
+    padding: 28px;
+  }
+
+  .rewrite-section + .rewrite-section {
+    border-top: 1px solid var(--border);
+  }
+
+  .rewrite-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .copy-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 5px 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.ok { border-color: var(--green); color: var(--green); }
+
+  .rewrite-body {
+    font-family: var(--serif);
+    font-size: 15.5px;
+    line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .audit-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .audit-list li {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    padding: 4px 0 4px 18px;
+    position: relative;
+  }
+
+  .audit-list li::before {
+    content: '~';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .streaming-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* ─── Diff ─── */
+  .diff-box {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.85;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .diff-heading {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .diff-del {
+    background: rgba(231,76,60,0.15);
+    color: #f87171;
+    text-decoration: line-through;
+    text-decoration-color: rgba(248,113,113,0.4);
+    padding: 1px 3px;
+    border-radius: 2px;
+  }
+
+  .diff-sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  /* ─── Empty state ─── */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-dim);
+  }
+
+  .empty .icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .empty .icon.green { color: var(--green); }
+
+  /* ─── Error ─── */
+  .error-box {
+    background: var(--red-dim);
+    border: 1px solid rgba(231,76,60,0.3);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--red);
+    display: none;
+  }
+
+  .error-box.visible { display: block; }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 640px) {
+    .app { padding: 28px 16px 60px; }
+    .header h1 { font-size: 32px; }
+    .score-row { flex-direction: column; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .sample-pills { justify-content: center; }
+    .divider-dot { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="eyebrow">AI Writing Audit</div>
+    <h1>The <em>De-Slop</em> Machine</h1>
+    <p class="subtitle">Paste text. Get a pattern audit and a Claude-powered rewrite with actual voice. Based on <a href="https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing" target="_blank">Wikipedia's AI Cleanup project</a>.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="input-label">
+      <label for="input">Paste your text</label>
+      <span class="char-count" id="charCount">0 chars</span>
+    </div>
+    <textarea id="input" placeholder="Paste AI-generated or AI-edited text here. The machine will find every tell, score it, and rewrite it clean."></textarea>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-primary" id="runBtn" onclick="run()">Analyze &amp; Rewrite</button>
+    <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+    <div class="divider-dot"></div>
+    <div class="sample-pills">
+      <button class="pill" onclick="loadSample('corporate')">Corporate bio</button>
+      <button class="pill" onclick="loadSample('blog')">Blog post</button>
+      <button class="pill" onclick="loadSample('linkedin')">LinkedIn post</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    <div class="loading-text" id="loadingText">Scanning for AI tells...</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="score-row" id="scoreRow"></div>
+
+    <div class="tabs" id="tabBar">
+      <button class="tab active" data-tab="findings">Findings</button>
+      <button class="tab" data-tab="rewrite">Rewrite</button>
+      <button class="tab" data-tab="diff">Diff</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-findings"></div>
+    <div class="tab-panel" id="panel-rewrite"></div>
+    <div class="tab-panel" id="panel-diff"></div>
+  </div>
+</div>
+
+<script>
+// ─── Samples ───
+const SAMPLES = {
+  corporate: `Dr. Sarah Chen serves as a pivotal figure in the rapidly evolving landscape of artificial intelligence research. Her groundbreaking work at the intersection of machine learning and neuroscience has garnered significant attention from industry observers and academic institutions alike.
+
+Additionally, her commitment to fostering innovation is a testament to her enduring dedication to the field. She has been featured in The New York Times, Wired, and MIT Technology Review, showcasing her vital role in shaping the future of AI.
+
+Not only has she published over 50 papers, but she has also mentored the next generation of researchers, ensuring that her legacy continues to inspire. Despite challenges typical of emerging fields \u2014 including funding constraints and reproducibility concerns \u2014 her work continues to thrive, underscoring the intricate interplay between theory and practice.
+
+The future looks bright for Dr. Chen's research program. Exciting times lie ahead as she continues her journey toward excellence in AI.`,
+
+  blog: `Great question! Here is an overview of the current state of remote work.
+
+Remote work has fundamentally reshaped the modern workplace, marking a pivotal shift in how organizations approach talent and productivity. In today's rapidly evolving business landscape, companies are navigating the delicate balance between flexibility and collaboration.
+
+- \ud83d\udca1 **Flexibility:** Remote work offers unprecedented flexibility, empowering employees to design their ideal work environment.
+- \ud83d\ude80 **Productivity:** Studies show enhanced productivity, contributing to better outcomes across industries.
+- \u2705 **Culture:** Organizations are cultivating vibrant virtual cultures, fostering alignment and engagement.
+
+Industry experts argue that the hybrid model represents a key turning point. It's not just about where you work; it's about unlocking creativity at scale. The shift from office-centric to distributed teams \u2014 from in-person meetings to virtual collaboration \u2014 reflects broader societal trends toward autonomy and digital transformation.
+
+I hope this helps! Let me know if you'd like me to expand on any section.`,
+
+  linkedin: `I'm thrilled to announce that after an incredible journey, I've joined TechCorp as their new Head of Innovation! \ud83d\ude80
+
+This role is a testament to the power of perseverance and lifelong learning. Throughout my career, I've been passionate about fostering groundbreaking solutions that drive meaningful impact.
+
+Three things I've learned along the way:
+- \ud83d\udca1 Embrace the journey, not just the destination
+- \ud83d\udd25 Your network is your net worth
+- \u2705 Stay curious, stay humble
+
+I'm excited to delve into this new chapter and contribute to TechCorp's vibrant culture of innovation. The future looks bright, and I can't wait to see what we'll build together!
+
+What's the best career advice you've ever received? Drop it in the comments! \ud83d\udc47
+
+#Innovation #Leadership #NewBeginnings #Grateful`
+};
+
+// ─── Pattern Engine ───
+const PATTERNS = [
+  { id:'significance', name:'Significance inflation', severity:'high',
+    re:[/\b(stands?|serves?|marks?|represents?)\s+as\b/gi, /\bis a testament\b/gi, /\b(vital|significant|crucial|pivotal|key)\s+(role|moment|figure|shift)\b/gi, /\b(underscores?|highlights?)\s+(its|the|their)\s+(importance|significance)\b/gi, /\breflects?\s+broader\b/gi, /\bsetting the stage\b/gi, /\bkey turning point\b/gi, /\b(rapidly\s+)?evolving\s+(landscape|field|world)\b/gi, /\bindelible mark\b/gi, /\bfocal point\b/gi],
+    fix:'State the specific fact instead of inflating its importance.' },
+  { id:'promotional', name:'Promotional language', severity:'high',
+    re:[/\bboasts?\s+a\b/gi, /\bvibrant\b/gi, /\bprofound\b/gi, /\bgroundbreaking\b/gi, /\brenowned\b/gi, /\bbreathtaking\b/gi, /\bstunning\b/gi, /\bnestled\b/gi, /\bin the heart of\b/gi, /\bseamless(,?\s+intuitive)?\b/gi, /\bunprecedented\b/gi],
+    fix:'Replace with neutral, specific descriptions.' },
+  { id:'ai_vocab', name:'AI vocabulary', severity:'med',
+    re:[/\bdelve\b/gi, /\btapestry\b/gi, /\binterplay\b/gi, /\bintricate|intricacies\b/gi, /\bunderscore[sd]?\b/gi, /\bfostering\b/gi, /\bgarnered?\b/gi, /\bshowcas(e|ing|es|ed)\b/gi, /\benduring\b/gi, /\bcultivat(e|ing)\b/gi],
+    fix:'Use plain, common words.' },
+  { id:'ing_suffix', name:'Superficial -ing phrase', severity:'med',
+    re:[/,\s*(highlighting|underscoring|emphasizing|ensuring|reflecting|symbolizing|contributing\s+to|cultivating|fostering|encompassing|showcasing)\b/gi],
+    fix:'Remove or convert to a separate, concrete sentence.' },
+  { id:'vague_attr', name:'Vague attribution', severity:'med',
+    re:[/\bindustry\s+(reports?|observers?|experts?)\b/gi, /\bobservers\s+have\s+(cited|noted)\b/gi, /\bexperts?\s+(argue|believe|say|suggest|note)\b/gi, /\bsome\s+critics\s+argue\b/gi],
+    fix:'Name the specific source or remove the attribution.' },
+  { id:'neg_parallel', name:'Negative parallelism', severity:'med',
+    re:[/\bnot\s+only\b[^.]*?\bbut\s+(also\s+)?/gi, /\bit'?s\s+not\s+just\s+(about\s+)?[^;]*?;\s*it'?s\b/gi],
+    fix:'State the point directly.' },
+  { id:'emdash', name:'Em dash overuse', severity:'low',
+    re:[/\u2014/g, /\s--\s/g], threshold:2,
+    fix:'Use commas, periods, or parentheses.' },
+  { id:'chatbot', name:'Chatbot artifact', severity:'high',
+    re:[/\b(great|excellent|fantastic)\s+question!?\b/gi, /\bi\s+hope\s+this\s+helps\b/gi, /\blet\s+me\s+know\s+if\b/gi, /\bhere\s+is\s+(a|an)\s+overview\b/gi],
+    fix:'Remove entirely. Start with the content.' },
+  { id:'false_range', name:'False range', severity:'med',
+    re:[/\bfrom\s+[\w\s]+\s+to\s+[\w\s]+,\s*from\s+/gi],
+    fix:'List specific examples without range framing.' },
+  { id:'copula', name:'Copula avoidance', severity:'low',
+    re:[/\b(serves?|stands?|functions?)\s+as\s+(a|an|the)\b/gi],
+    fix:'Use "is", "are", or "has" instead.' },
+  { id:'emoji_bold', name:'Emoji + bold list', severity:'high',
+    re:[/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]\s*\*?\*?[A-Z]/gu],
+    fix:'Write in sentences. Drop emojis and decorative bold.' },
+  { id:'generic_end', name:'Generic positive ending', severity:'med',
+    re:[/\bthe\s+future\s+looks\s+bright\b/gi, /\bexciting\s+times\s+(lie|are)\s+ahead\b/gi, /\bcontinue[sd]?\s+(this|their|her|his|our|my)\s+journey\b/gi, /\btoward\s+excellence\b/gi, /\bcan'?t\s+wait\s+to\s+see\b/gi],
+    fix:'End with a concrete next step or specific fact.' },
+  { id:'hedge', name:'Excessive hedging', severity:'low',
+    re:[/\bcould\s+potentially\b/gi, /\bin\s+order\s+to\b/gi, /\bdue\s+to\s+the\s+fact\s+that\b/gi, /\bhas\s+the\s+ability\s+to\b/gi, /\bit\s+(is|should\s+be)\s+(noted|mentioned)\s+that\b/gi],
+    fix:'Say it directly.' },
+  { id:'sycophantic', name:'Sycophantic tone', severity:'med',
+    re:[/\bi'?m\s+thrilled\b/gi, /\bincredible\s+journey\b/gi, /\bpassionate\s+about\b/gi, /\bmeaningful\s+impact\b/gi, /\bdrive\s+(meaningful|positive)\s+/gi],
+    fix:'State facts about what happened, not feelings about it.' },
+  { id:'despite', name:'Despite-challenges formula', severity:'med',
+    re:[/\bdespite\s+(these\s+)?challenges?[^.]*continues?\s+to\s+(thrive|grow|evolve)\b/gi],
+    fix:'Name the specific challenge and what was done about it.' },
+  { id:'hashtag', name:'Hashtag decoration', severity:'low',
+    re:[/#[A-Z]\w+/g], threshold:2,
+    fix:'Remove unless on an actual social platform.' },
+];
+
+function scan(text) {
+  const hits = [];
+  for (const p of PATTERNS) {
+    const matches = [];
+    for (const re of p.re) {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(text)) !== null) matches.push(m);
+    }
+    if (p.threshold && matches.length < p.threshold) continue;
+    for (const m of matches) {
+      hits.push({ type: p.name, severity: p.severity, match: m[0], index: m.index, fix: p.fix });
+    }
+  }
+  hits.sort((a, b) => a.index - b.index);
+  // dedupe overlapping
+  const out = [];
+  let end = -1;
+  for (const h of hits) {
+    if (h.index >= end) { out.push(h); end = h.index + h.match.length; }
+  }
+  return out;
+}
+
+function ctx(text, idx, len) {
+  const s = Math.max(0, text.lastIndexOf(' ', Math.max(0, idx - 35)));
+  let e = text.indexOf(' ', idx + len + 35);
+  if (e === -1) e = text.length;
+  return {
+    before: text.substring(s, idx).trim(),
+    match: text.substring(idx, idx + len),
+    after: text.substring(idx + len, e).trim()
+  };
+}
+
+// ─── Claude API rewrite ───
+async function claudeRewrite(text, findings) {
+  const patternSummary = findings.slice(0, 20).map(f => `- [${f.severity.toUpperCase()}] "${f.match}" -> ${f.type}`).join('\n');
+
+  const systemPrompt = `You are a writing editor. Your job: take AI-sounding text and rewrite it so it reads like a real human wrote it.
+
+Rules:
+1. Remove ALL AI writing patterns: significance inflation, promotional language, chatbot artifacts ("Great question!", "I hope this helps"), emoji-bold lists, copula avoidance ("serves as" -> "is"), negative parallelisms ("not just X; it's Y"), superficial -ing phrases, vague attributions, em dash overuse, false ranges, generic conclusions, hedging, sycophancy.
+2. Preserve the core meaning and facts.
+3. Add VOICE: vary sentence rhythm, have opinions where appropriate, use first-person if it fits, acknowledge complexity and mixed feelings.
+4. Use simple words. "Is" instead of "serves as". "Because" instead of "due to the fact that".
+5. No emojis, no bold, no hashtags, no bullet-point lists. Write in natural paragraphs.
+6. Make it sound like a smart person talking, not a press release.
+7. Keep it roughly the same length or shorter.
+
+Respond with ONLY the rewritten text. No preamble, no explanation, no meta-commentary. Just the clean text.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{
+        role: 'user',
+        content: `Here is the text to humanize. The pattern scanner found these issues:\n\n${patternSummary}\n\n---\n\nTEXT TO REWRITE:\n\n${text}`
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`API ${response.status}: ${err.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+  return data.content.map(c => c.text || '').join('').trim();
+}
+
+async function claudeAudit(rewrite) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: `Read this text and answer briefly: "What makes the below so obviously AI generated?" List 2-4 remaining tells as short bullet points. If nothing is obviously AI, say "Clean. No obvious AI tells remaining."\n\nTEXT:\n${rewrite}`
+      }]
+    })
+  });
+
+  if (!response.ok) throw new Error('Audit request failed');
+  const data = await response.json();
+  return data.content.map(c => c.text || '').join('').trim();
+}
+
+async function claudeFinalPass(rewrite, auditNotes) {
+  if (/clean|no obvious/i.test(auditNotes)) return null;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: 'You are a writing editor. Revise the text to fix the remaining AI tells identified. Respond with ONLY the revised text, nothing else.',
+      messages: [{
+        role: 'user',
+        content: `Remaining AI tells:\n${auditNotes}\n\nText to fix:\n${rewrite}`
+      }]
+    })
+  });
+
+  if (!response.ok) throw new Error('Final pass failed');
+  const data = await response.json();
+  return data.content.map(c => c.text || '').join('').trim();
+}
+
+// ─── UI ───
+const LOAD_MSGS = [
+  'Scanning for AI tells...',
+  'Counting em dashes...',
+  'Detecting significance inflation...',
+  'Flagging sycophancy...',
+  'Rating slop density...',
+  'Sending to Claude for rewrite...',
+  'Adding voice and soul...',
+  'Running anti-AI audit...',
+  'Final polish...'
+];
+
+document.getElementById('input').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length + ' chars';
+});
+
+document.getElementById('tabBar').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tab')) return;
+  this.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('panel-' + e.target.dataset.tab).classList.add('active');
+});
+
+function showError(msg) {
+  const el = document.getElementById('errorBox');
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 8000);
+}
+
+async function run() {
+  const text = document.getElementById('input').value.trim();
+  if (!text) return;
+  if (text.length < 30) { showError('Paste at least a sentence or two.'); return; }
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('loading').classList.add('visible');
+  document.getElementById('errorBox').classList.remove('visible');
+
+  let msgIdx = 0;
+  const msgTimer = setInterval(() => {
+    msgIdx = (msgIdx + 1) % LOAD_MSGS.length;
+    document.getElementById('loadingText').textContent = LOAD_MSGS[msgIdx];
+  }, 1200);
+
+  try {
+    // Step 1: Pattern scan (instant)
+    const findings = scan(text);
+
+    // Step 2: Claude rewrite
+    document.getElementById('loadingText').textContent = 'Sending to Claude for rewrite...';
+    const draft = await claudeRewrite(text, findings);
+
+    // Step 3: Anti-AI audit
+    document.getElementById('loadingText').textContent = 'Running anti-AI audit...';
+    const auditNotes = await claudeAudit(draft);
+
+    // Step 4: Final pass if needed
+    let finalText = draft;
+    let didFinalPass = false;
+    if (!/clean|no obvious/i.test(auditNotes)) {
+      document.getElementById('loadingText').textContent = 'Final polish...';
+      const polished = await claudeFinalPass(draft, auditNotes);
+      if (polished) { finalText = polished; didFinalPass = true; }
+    }
+
+    clearInterval(msgTimer);
+    document.getElementById('loading').classList.remove('visible');
+    btn.disabled = false;
+
+    renderResults(text, findings, draft, auditNotes, finalText, didFinalPass);
+    document.getElementById('results').classList.add('visible');
+
+  } catch (err) {
+    clearInterval(msgTimer);
+    document.getElementById('loading').classList.remove('visible');
+    btn.disabled = false;
+    showError('API error: ' + err.message);
+    console.error(err);
+  }
+}
+
+function renderResults(original, findings, draft, auditNotes, finalText, didFinalPass) {
+  const total = findings.length;
+  const hi = findings.filter(f => f.severity === 'high').length;
+  const med = findings.filter(f => f.severity === 'med').length;
+  const lo = findings.filter(f => f.severity === 'low').length;
+  const score = Math.max(0, 100 - (hi * 12 + med * 6 + lo * 2));
+  const cls = score >= 80 ? 'good' : score >= 50 ? 'ok' : 'bad';
+
+  document.getElementById('scoreRow').innerHTML = `
+    <div class="score-hero">
+      <div class="score-num ${cls}">${score}</div>
+      <div class="score-tag">Human Score</div>
+    </div>
+    <div class="score-grid">
+      <div class="score-cell">
+        <span class="score-cell-label">Total patterns</span>
+        <span class="score-badge ${total === 0 ? 'z' : total < 5 ? 'lo' : 'hi'}">${total}</span>
+      </div>
+      <div class="score-cell">
+        <span class="score-cell-label">High severity</span>
+        <span class="score-badge ${hi === 0 ? 'z' : 'hi'}">${hi}</span>
+      </div>
+      <div class="score-cell">
+        <span class="score-cell-label">Medium</span>
+        <span class="score-badge ${med === 0 ? 'z' : med < 3 ? 'lo' : 'hi'}">${med}</span>
+      </div>
+      <div class="score-cell">
+        <span class="score-cell-label">Low</span>
+        <span class="score-badge ${lo === 0 ? 'z' : 'lo'}">${lo}</span>
+      </div>
+    </div>`;
+
+  // Findings
+  if (!findings.length) {
+    document.getElementById('panel-findings').innerHTML = `<div class="empty"><span class="icon green">\u2713</span>Clean. No obvious AI patterns detected.</div>`;
+  } else {
+    document.getElementById('panel-findings').innerHTML = findings.map(f => {
+      const c = ctx(original, f.index, f.match.length);
+      return `<div class="finding">
+        <div class="finding-head">
+          <span class="finding-type">${esc(f.type)}</span>
+          <span class="sev sev-${f.severity}">${f.severity}</span>
+        </div>
+        <div class="finding-quote">${esc(c.before)} <mark>${esc(c.match)}</mark> ${esc(c.after)}</div>
+        <div class="finding-fix"><strong>Fix:</strong> ${esc(f.fix)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Rewrite
+  const auditItems = auditNotes.split('\n').filter(l => l.trim()).map(l => l.replace(/^[-*\u2022]\s*/, '').trim()).filter(Boolean);
+
+  document.getElementById('panel-rewrite').innerHTML = `
+    <div class="rewrite-card">
+      ${didFinalPass ? `
+      <div class="rewrite-section">
+        <div class="rewrite-label">Draft rewrite (pass 1)</div>
+        <div class="rewrite-body" style="color:var(--text-muted);font-size:14px;">${esc(draft)}</div>
+      </div>
+      <div class="rewrite-section">
+        <div class="rewrite-label">Anti-AI audit</div>
+        <ul class="audit-list">${auditItems.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+      </div>
+      <div class="rewrite-section" style="background:var(--accent-glow);">
+        <div class="rewrite-label">
+          Final rewrite (pass 2)
+          <button class="copy-btn" onclick="copyText(this,'finalText')">Copy</button>
+        </div>
+        <div class="rewrite-body" id="finalText">${esc(finalText)}</div>
+      </div>` : `
+      <div class="rewrite-section">
+        <div class="rewrite-label">
+          Claude rewrite
+          <button class="copy-btn" onclick="copyText(this,'finalText')">Copy</button>
+        </div>
+        <div class="rewrite-body" id="finalText">${esc(finalText)}</div>
+      </div>
+      <div class="rewrite-section">
+        <div class="rewrite-label">Anti-AI audit</div>
+        <ul class="audit-list">${auditItems.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+      </div>`}
+    </div>`;
+
+  // Diff
+  document.getElementById('panel-diff').innerHTML = `
+    <div class="diff-box">
+      <div class="diff-heading">Original</div>
+      <div style="margin-bottom:20px;font-family:var(--serif);font-size:14px;color:var(--text-muted);line-height:1.8;">${esc(original)}</div>
+      <hr class="diff-sep">
+      <div class="diff-heading">Final rewrite</div>
+      <div style="font-family:var(--serif);font-size:14px;line-height:1.8;">${esc(finalText)}</div>
+    </div>`;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function copyText(btn, id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1500);
+  });
+}
+
+function loadSample(key) {
+  const ta = document.getElementById('input');
+  ta.value = SAMPLES[key];
+  ta.dispatchEvent(new Event('input'));
+  document.getElementById('results').classList.remove('visible');
+}
+
+function clearAll() {
+  const ta = document.getElementById('input');
+  ta.value = '';
+  ta.dispatchEvent(new Event('input'));
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('errorBox').classList.remove('visible');
+}
+</script>
+</body>
+</html>
