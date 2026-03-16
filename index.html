@@ -37,6 +37,30 @@
     --serif: 'Newsreader', Georgia, serif;
   }
 
+  html.light {
+    --bg: #f5f3ef;
+    --surface: #ffffff;
+    --surface-2: #f0ede8;
+    --surface-3: #e8e5df;
+    --border: #d5d0c8;
+    --border-hover: #bbb5aa;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --text-dim: #999;
+    --accent: #e05520;
+    --accent-hover: #c94a1a;
+    --accent-dim: rgba(224,85,32,0.1);
+    --accent-glow: rgba(224,85,32,0.05);
+    --red: #d43d2f;
+    --red-dim: rgba(212,61,47,0.08);
+    --yellow: #b8922e;
+    --yellow-dim: rgba(184,146,46,0.08);
+    --green: #2a9d4e;
+    --green-dim: rgba(42,157,78,0.08);
+    --blue: #3b82d6;
+    --blue-dim: rgba(59,130,214,0.08);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -639,6 +663,34 @@
 
   .error-box.visible { display: block; }
 
+  /* ─── Theme toggle ─── */
+  .theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    font-family: var(--mono);
+    font-size: 18px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  html.light body::before { opacity: 0; }
+
   /* ─── Responsive ─── */
   @media (max-width: 640px) {
     .app { padding: 28px 16px 60px; }
@@ -651,6 +703,7 @@
 </style>
 </head>
 <body>
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">&#9790;</button>
 <div class="app">
 
   <!-- Header -->
@@ -1122,6 +1175,20 @@ function clearAll() {
   document.getElementById('results').classList.remove('visible');
   document.getElementById('errorBox').classList.remove('visible');
 }
+// ─── Theme toggle ───
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  document.getElementById('themeToggle').innerHTML = isLight ? '&#9728;' : '&#9790;';
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light' || (!saved && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+    document.documentElement.classList.add('light');
+    document.getElementById('themeToggle').innerHTML = '&#9728;';
+  }
+})();
+
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>

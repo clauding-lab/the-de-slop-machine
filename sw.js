@@ -1,4 +1,4 @@
-const CACHE = 'deslop-v2';
+const CACHE = 'deslop-v3';
 const PRECACHE = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
