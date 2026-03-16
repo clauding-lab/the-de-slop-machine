@@ -702,6 +702,8 @@
 </div>
 
 <script>
+const PROXY_URL = 'https://ywdrprqnykxwkbthvmri.supabase.co/functions/v1/claude-proxy';
+
 // ─── Samples ───
 const SAMPLES = {
   corporate: `Dr. Sarah Chen serves as a pivotal figure in the rapidly evolving landscape of artificial intelligence research. Her groundbreaking work at the intersection of machine learning and neuroscience has garnered significant attention from industry observers and academic institutions alike.
@@ -844,7 +846,7 @@ Rules:
 
 Respond with ONLY the rewritten text. No preamble, no explanation, no meta-commentary. Just the clean text.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -868,7 +870,7 @@ Respond with ONLY the rewritten text. No preamble, no explanation, no meta-comme
 }
 
 async function claudeAudit(rewrite) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -889,7 +891,7 @@ async function claudeAudit(rewrite) {
 async function claudeFinalPass(rewrite, auditNotes) {
   if (/clean|no obvious/i.test(auditNotes)) return null;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
