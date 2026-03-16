@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -703,7 +703,7 @@
 </style>
 </head>
 <body>
-<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">&#9790;</button>
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">&#9728;</button>
 <div class="app">
 
   <!-- Header -->
@@ -1183,9 +1183,9 @@ function toggleTheme() {
 }
 (function() {
   const saved = localStorage.getItem('theme');
-  if (saved === 'light' || (!saved && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-    document.documentElement.classList.add('light');
-    document.getElementById('themeToggle').innerHTML = '&#9728;';
+  if (saved === 'dark') {
+    document.documentElement.classList.remove('light');
+    document.getElementById('themeToggle').innerHTML = '&#9790;';
   }
 })();
 
