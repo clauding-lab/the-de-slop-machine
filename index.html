@@ -620,12 +620,52 @@
   }
 
   .diff-del {
-    background: rgba(231,76,60,0.15);
-    color: #f87171;
+    background: rgba(231,76,60,0.18);
+    color: #dc2626;
     text-decoration: line-through;
-    text-decoration-color: rgba(248,113,113,0.4);
-    padding: 1px 3px;
-    border-radius: 2px;
+    text-decoration-color: rgba(220,38,38,0.5);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  .diff-ins {
+    background: rgba(34,197,94,0.15);
+    color: #16a34a;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  .light .diff-del {
+    background: rgba(231,76,60,0.12);
+    color: #b91c1c;
+  }
+
+  .light .diff-ins {
+    background: rgba(34,197,94,0.12);
+    color: #15803d;
+  }
+
+  .diff-legend {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 18px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+  }
+
+  .diff-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .diff-legend .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
   }
 
   .diff-sep {
@@ -1137,15 +1177,68 @@ function renderResults(original, findings, draft, auditNotes, finalText, didFina
       </div>`}
     </div>`;
 
-  // Diff
+  // Diff — word-level inline comparison
+  const diffHtml = buildWordDiff(original, finalText);
   document.getElementById('panel-diff').innerHTML = `
     <div class="diff-box">
-      <div class="diff-heading">Original</div>
-      <div style="margin-bottom:20px;font-family:var(--serif);font-size:14px;color:var(--text-muted);line-height:1.8;">${esc(original)}</div>
-      <hr class="diff-sep">
-      <div class="diff-heading">Final rewrite</div>
-      <div style="font-family:var(--serif);font-size:14px;line-height:1.8;">${esc(finalText)}</div>
+      <div class="diff-legend">
+        <span><span class="swatch" style="background:rgba(231,76,60,0.25)"></span> Removed</span>
+        <span><span class="swatch" style="background:rgba(34,197,94,0.25)"></span> Added</span>
+      </div>
+      <div style="font-family:var(--serif);font-size:14px;line-height:2;">${diffHtml}</div>
     </div>`;
+}
+
+function buildWordDiff(oldText, newText) {
+  const oldWords = oldText.split(/(\s+)/);
+  const newWords = newText.split(/(\s+)/);
+  // LCS-based diff on words
+  const m = oldWords.length, n = newWords.length;
+  // For large texts, use a simpler approach with bounded DP
+  const MAX = 2000;
+  if (m > MAX || n > MAX) {
+    return `<span class="diff-del">${esc(oldText)}</span> <span class="diff-ins">${esc(newText)}</span>`;
+  }
+  // Build LCS table
+  const dp = Array.from({length: m + 1}, () => new Uint16Array(n + 1));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (oldWords[i-1] === newWords[j-1]) dp[i][j] = dp[i-1][j-1] + 1;
+      else dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  // Backtrack
+  const result = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldWords[i-1] === newWords[j-1]) {
+      result.push({type: 'eq', text: oldWords[i-1]});
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+      result.push({type: 'ins', text: newWords[j-1]});
+      j--;
+    } else {
+      result.push({type: 'del', text: oldWords[i-1]});
+      i--;
+    }
+  }
+  result.reverse();
+  // Render, grouping consecutive same-type tokens
+  let html = '';
+  let buf = '', bufType = '';
+  function flush() {
+    if (!buf) return;
+    if (bufType === 'del') html += `<span class="diff-del">${esc(buf)}</span>`;
+    else if (bufType === 'ins') html += `<span class="diff-ins">${esc(buf)}</span>`;
+    else html += esc(buf);
+    buf = '';
+  }
+  for (const tok of result) {
+    if (tok.type !== bufType) { flush(); bufType = tok.type; }
+    buf += tok.text;
+  }
+  flush();
+  return html;
 }
 
 function esc(s) {
